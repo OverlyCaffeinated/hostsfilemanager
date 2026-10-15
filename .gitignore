@@ -1,0 +1,17 @@
+# Binaries
+hostfilemanager
+*.exe
+
+# Go build cache
+vendor/
+
+# Local config (contains hostnames/IPs specific to your machine)
+hosts.json
+
+# Editor / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store

@@ -1,0 +1,12 @@
+[
+  {
+    "ip": "127.0.0.1",
+    "hostnames": ["example.local", "www.example.local"],
+    "comment": "local development"
+  },
+  {
+    "ip": "192.168.1.50",
+    "hostnames": ["nas.local", "storage.local"],
+    "comment": "home NAS"
+  }
+]
