@@ -2,8 +2,8 @@
 // creates/updates a managed section in the system hosts file (/etc/hosts).
 //
 // The managed section is delimited by marker comments so that:
-//   * the file owner can clearly see which records are managed by this app,
-//   * the app knows exactly where to insert/update the records it owns.
+//   - the file owner can clearly see which records are managed by this app,
+//   - the app knows exactly where to insert/update the records it owns.
 //
 // Everything outside the managed section is left untouched.
 package main
@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -33,12 +34,19 @@ const (
 
 // HostEntry is a single hosts-file record: one IP mapped to one or more hostnames.
 type HostEntry struct {
-	IP       string   `json:"ip"`
+	IP        string   `json:"ip"`
 	Hostnames []string `json:"hostnames"`
-	Comment  string   `json:"comment,omitempty"`
+	Comment   string   `json:"comment,omitempty"`
 }
 
 func main() {
+	// The hosts file is root-owned, so if we are not already running with
+	// elevated privileges, re-exec ourselves under sudo and let it prompt for
+	// the admin password.
+	if !runningAsRoot() {
+		os.Exit(elevate())
+	}
+
 	// Allow an alternate config path via the first argument.
 	configPath := defaultConfigPath
 	if len(os.Args) > 1 {
@@ -52,6 +60,44 @@ func main() {
 }
 
 const defaultConfigPath = configPath
+
+// runningAsRoot reports whether the process has effective root privileges,
+// either because it was started by root or via sudo.
+func runningAsRoot() bool {
+	return os.Geteuid() == 0
+}
+
+// elevate re-executes the current executable under sudo, prompting the user for
+// their admin password. It returns the exit status of the elevated process (or
+// 1 if escalation could not be attempted at all).
+func elevate() int {
+	if _, err := exec.LookPath("sudo"); err != nil {
+		fmt.Fprintln(os.Stderr, "error: this program must run as root to write /etc/hosts; please run it with sudo")
+		return 1
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: locating executable: %v\n", err)
+		return 1
+	}
+
+	args := append([]string{exe}, os.Args[1:]...)
+	cmd := exec.Command("sudo", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitErr.ExitCode()
+		}
+		fmt.Fprintf(os.Stderr, "error: elevating privileges: %v\n", err)
+		return 1
+	}
+
+	return 0
+}
 
 // run loads the config, builds the managed block, merges it into the hosts
 // file, and writes the result back.

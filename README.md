@@ -66,12 +66,16 @@ go build -o hostfilemanager .
 cp hosts.json.example hosts.json
 # edit hosts.json ...
 
-# Run (requires root because /etc/hosts is root-owned)
-sudo ./hostfilemanager
+# Run (it will ask for your admin password via sudo if not already root)
+./hostfilemanager
 
 # Or with a custom config path
-sudo ./hostfilemanager /path/to/hosts.json
+./hostfilemanager /path/to/hosts.json
 ```
+
+If the program is not already running as root, it re-launches itself with
+`sudo`, which prompts for your admin password. You can also run it directly
+with `sudo` if you prefer.
 
 The tool prints a summary on success:
 
@@ -83,7 +87,8 @@ hosts file updated: 2 managed entry(ies) written to /etc/hosts
 
 * Go 1.27+
 * Linux or macOS (`/etc/hosts`)
-* Root / `sudo` privileges to write `/etc/hosts`
+* Root or `sudo` privileges to write `/etc/hosts` (the tool prompts for the
+  admin password automatically when needed)
 
 ## Safety
 
